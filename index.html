@@ -1,0 +1,81 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Election Visualizer</title>
+    <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="canvas-container">
+            <canvas id="electionCanvas"></canvas>
+        </div>
+        <div class="controls">
+            <h2>Controls</h2>
+            <button class="button" id="newElection">New Election</button>
+            <button class="button" id="hexagonLayout">Hexagon Layout</button>
+            
+            <div class="control-group">
+                <label class="label">Number of Candidates: <span id="candidateCount">2</span></label>
+                <input type="range" min="2" max="6" value="2" class="slider" id="candidateSlider">
+            </div>
+            
+            <div class="control-group">
+                <label class="label">Election Type</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="electionType" value="plurality" checked>
+                        Plurality
+                    </label>
+                    <label>
+                        <input type="radio" name="electionType" value="instant_runoff">
+                        Instant Runoff
+                    </label>
+                    <label>
+                        <input type="radio" name="electionType" value="approval">
+                        Approval
+                    </label>
+                    <div id="approvalOptions" style="margin-left: 20px; display: none;">
+                        <label>
+                            <input type="radio" name="approvalType" value="honest" checked>
+                            Honest
+                        </label>
+                        <label>
+                            <input type="radio" name="approvalType" value="strategic">
+                            Strategic
+                        </label>
+                    </div>
+                    <label>
+                        <input type="radio" name="electionType" value="star">
+                        STAR
+                    </label>
+                </div>
+            </div>
+        
+            <div class="control-group">
+                <label class="label">Voter Distribution</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="distributionType" value="gaussian" checked>
+                        Gaussian
+                    </label>
+                    <label>
+                        <input type="radio" name="distributionType" value="uniform">
+                        Uniform
+                    </label>
+                </div>
+            </div>
+            
+            <button class="button" id="tabulateButton">Tabulate Election</button>
+        </div>
+        <div class="results-panel">
+            <h2>Results</h2>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script src="scripts/script.js"></script>
+    </script>
+</body>
+</html>
