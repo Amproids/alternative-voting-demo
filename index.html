@@ -1,81 +1,165 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Election Visualizer</title>
-    <link rel="stylesheet" href="styles/style.css">
+<meta charset="UTF-8">
+<title>Election Visualizer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Election Simulator and Visualizer">
+<meta name="author" content="Andrew L. Parry">
+<link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="canvas-container">
-            <canvas id="electionCanvas"></canvas>
+<div class="main-container">
+    <div class="header-section">
+        <h1>Election Visualizer</h1>
+        <p class="subtitle">By Andrew L. Parry</p>
+    </div>
+    
+    <div class="canvas-container">
+        <canvas id="electionCanvas"></canvas>
+    </div>
+    
+    <div class="controls">
+        <div class="modes">
+            <button id="one-election-multiple-distributions">One Election, Multiple Distributions</button>
+            <button id="multiple-elections-one-distribution">Multiple Elections, One Distribution</button>
         </div>
-        <div class="controls">
-            <h2>Controls</h2>
-            <button class="button" id="newElection">New Election</button>
-            <button class="button" id="hexagonLayout">Hexagon Layout</button>
-            
-            <div class="control-group">
-                <label class="label">Number of Candidates: <span id="candidateCount">2</span></label>
-                <input type="range" min="2" max="6" value="2" class="slider" id="candidateSlider">
-            </div>
-            
-            <div class="control-group">
-                <label class="label">Election Type</label>
-                <div class="radio-group">
-                    <label>
-                        <input type="radio" name="electionType" value="plurality" checked>
-                        Plurality
-                    </label>
-                    <label>
-                        <input type="radio" name="electionType" value="instant_runoff">
-                        Instant Runoff
-                    </label>
-                    <label>
-                        <input type="radio" name="electionType" value="approval">
-                        Approval
-                    </label>
-                    <div id="approvalOptions" style="margin-left: 20px; display: none;">
-                        <label>
-                            <input type="radio" name="approvalType" value="honest" checked>
-                            Honest
-                        </label>
-                        <label>
-                            <input type="radio" name="approvalType" value="strategic">
-                            Strategic
-                        </label>
-                    </div>
-                    <label>
-                        <input type="radio" name="electionType" value="star">
-                        STAR
-                    </label>
-                </div>
-            </div>
         
-            <div class="control-group">
-                <label class="label">Voter Distribution</label>
-                <div class="radio-group">
-                    <label>
-                        <input type="radio" name="distributionType" value="gaussian" checked>
-                        Gaussian
-                    </label>
-                    <label>
-                        <input type="radio" name="distributionType" value="uniform">
-                        Uniform
-                    </label>
+        <h2>Candidates</h2>
+        <label for="candidateSlider">Number of candidates: <span id="candidateValue">2</span></label>
+        <input type="range" id="candidateSlider" min="2" max="6" value="2">
+
+        <div class="election-types">
+            <h2>Voting Method</h2>
+            <input type="radio" id="plurality" name="electionType" value="plurality" checked>
+            <label for="plurality">Plurality</label><br>
+            <input type="radio" id="instant_runoff" name="electionType" value="instant_runoff">
+            <label for="instant_runoff">Instant Runoff</label><br>
+            <input type="radio" id="approval" name="electionType" value="approval">
+            <label for="approval">Approval</label><br>
+            <input type="radio" id="star" name="electionType" value="star">
+            <label for="star">STAR</label><br>
+        </div>
+        
+        <!-- Approval Voting Controls (show/hide based on voting method) -->
+        <div id="approval-controls">
+        <label for="approvalRadiusSlider">Approval Radius: <span id="approvalRadiusValue">150</span></label>
+        <input type="range" id="approvalRadiusSlider" min="50" max="300" value="150">
+        
+        <div>
+            <label><input type="radio" name="votingStrategy" value="strategic" checked> Strategic</label>
+            <label><input type="radio" name="votingStrategy" value="honest"> Honest</label>
+        </div>
+        </div>
+        <button id="resetButton">Reset Positions</button>
+        
+        <div class="multiple-elections-one-distribution-mode">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+        
+        <div class="one-election-multiple-distributions-mode">
+            <h2>Distributions</h2>
+            <div id="distributions">
+                <label for="distributionSlider">Number of distributions: <span id="distributionValue">1</span></label>
+                <input type="range" id="distributionSlider" min="1" max="6" value="1">
+                <!-- Distribution sections - add this inside the one-election-multiple-distributions-mode div -->
+                <div class="distribution-sections">
+                    <!-- Distribution 1 -->
+                    <div class="distribution-section" id="distribution-1">
+                        <h4>Distribution 1</h4>
+                        <div class="slider-group">
+                            <label>Radius: <span id="radius-value-1">300</span></label>
+                            <input type="range" id="radius-1" min="50" max="500" value="300" step="10">
+                        </div>
+                        <div class="slider-group">
+                            <label>Voters: <span id="voters-value-1">1000</span></label>
+                            <input type="range" id="voters-1" min="100" max="3000" value="1000" step="100">
+                        </div>
+                    </div>
+
+                    <!-- Distribution 2 -->
+                    <div class="distribution-section" id="distribution-2" style="display: none;">
+                        <h4>Distribution 2</h4>
+                        <div class="slider-group">
+                            <label>Radius: <span id="radius-value-2">300</span></label>
+                            <input type="range" id="radius-2" min="50" max="500" value="300" step="10">
+                        </div>
+                        <div class="slider-group">
+                            <label>Voters: <span id="voters-value-2">1000</span></label>
+                            <input type="range" id="voters-2" min="100" max="3000" value="1000" step="100">
+                        </div>
+                    </div>
+
+                    <!-- Distribution 3 -->
+                    <div class="distribution-section" id="distribution-3" style="display: none;">
+                        <h4>Distribution 3</h4>
+                        <div class="slider-group">
+                            <label>Radius: <span id="radius-value-3">300</span></label>
+                            <input type="range" id="radius-3" min="50" max="500" value="300" step="10">
+                        </div>
+                        <div class="slider-group">
+                            <label>Voters: <span id="voters-value-3">1000</span></label>
+                            <input type="range" id="voters-3" min="100" max="3000" value="1000" step="100">
+                        </div>
+                    </div>
+
+                    <!-- Distribution 4 -->
+                    <div class="distribution-section" id="distribution-4" style="display: none;">
+                        <h4>Distribution 4</h4>
+                        <div class="slider-group">
+                            <label>Radius: <span id="radius-value-4">300</span></label>
+                            <input type="range" id="radius-4" min="50" max="500" value="300" step="10">
+                        </div>
+                        <div class="slider-group">
+                            <label>Voters: <span id="voters-value-4">1000</span></label>
+                            <input type="range" id="voters-4" min="100" max="3000" value="1000" step="100">
+                        </div>
+                    </div>
+
+                    <!-- Distribution 5 -->
+                    <div class="distribution-section" id="distribution-5" style="display: none;">
+                        <h4>Distribution 5</h4>
+                        <div class="slider-group">
+                            <label>Radius: <span id="radius-value-5">300</span></label>
+                            <input type="range" id="radius-5" min="50" max="500" value="300" step="10">
+                        </div>
+                        <div class="slider-group">
+                            <label>Voters: <span id="voters-value-5">1000</span></label>
+                            <input type="range" id="voters-5" min="100" max="3000" value="1000" step="100">
+                        </div>
+                    </div>
+
+                    <!-- Distribution 6 -->
+                    <div class="distribution-section" id="distribution-6" style="display: none;">
+                        <h4>Distribution 6</h4>
+                        <div class="slider-group">
+                            <label>Radius: <span id="radius-value-6">300</span></label>
+                            <input type="range" id="radius-6" min="50" max="500" value="300" step="10">
+                        </div>
+                        <div class="slider-group">
+                            <label>Voters: <span id="voters-value-6">1000</span></label>
+                            <input type="range" id="voters-6" min="100" max="3000" value="1000" step="100">
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <button class="button" id="tabulateButton">Tabulate Election</button>
-        </div>
-        <div class="results-panel">
-            <h2>Results</h2>
-            <div id="results"></div>
         </div>
     </div>
-
-    <script src="scripts/script.js"></script>
-    </script>
+    <div class="controls">
+        <div class="results">
+            <h2>Results</h2>
+            <div id="results">Select "One Election, Multiple Distributions" mode and "Plurality" voting to see results.</div>
+        </div>
+    </div>
+</div>
+<!-- Load all module files in order -->
+<script src="scripts/CanvasRenderer.js"></script>
+<script src="scripts/UIController.js"></script>
+<script src="scripts/DragHandler.js"></script>
+<script src="scripts/VoterDistribution.js"></script>
+<script src="scripts/VotingMethods.js"></script>
+<script src="scripts/StorageManager.js"></script>
+<!-- Main orchestrator MUST be loaded last -->
+<script src="scripts/ElectionVisualizer.js"></script>
 </body>
 </html>
