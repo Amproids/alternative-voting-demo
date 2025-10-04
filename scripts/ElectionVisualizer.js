@@ -22,6 +22,14 @@ class ElectionVisualizer {
         this.approvalRadius = 150;
         this.isStrategicVoting = true; // true = strategic, false = honest
         
+        // IRV round selection
+        this.selectedIRVRound = 1;
+        
+        // STAR voting settings
+        this.starMaxDistance = 300;
+        this.selectedSTARRound = 1;
+        this.displayStarRanges = true;
+        
         // Initialize modules
         this.initializeModules();
         
@@ -60,7 +68,11 @@ class ElectionVisualizer {
         this.ui.onDistributionVotersChange = (index, count) => this.handleDistributionVotersChange(index, count);
         this.ui.onApprovalRadiusChange = (radius) => this.handleApprovalRadiusChange(radius);
         this.ui.onVotingStrategyChange = (isStrategic) => this.handleVotingStrategyChange(isStrategic);
+        this.ui.onSTARMaxDistanceChange = (distance) => this.handleSTARMaxDistanceChange(distance);
         this.ui.onResetClick = () => this.handleReset();
+        this.ui.onRoundSelect = (roundNum) => this.handleRoundSelect(roundNum);
+        this.ui.onSTARRoundSelect = (roundNum) => this.handleSTARRoundSelect(roundNum);
+        this.ui.onDisplayStarRangesChange = (display) => this.handleDisplayStarRangesChange(display);
 
         // Drag Handler callbacks
         this.dragHandler.getState = () => this.getState();
@@ -103,7 +115,11 @@ class ElectionVisualizer {
             shouldCalculateElection: this.shouldCalculateElection(),
             electionResults: this.electionResults,
             approvalRadius: this.approvalRadius,
-            isStrategicVoting: this.isStrategicVoting
+            isStrategicVoting: this.isStrategicVoting,
+            selectedIRVRound: this.selectedIRVRound,
+            starMaxDistance: this.starMaxDistance,
+            selectedSTARRound: this.selectedSTARRound,
+            displayStarRanges: this.displayStarRanges
         };
     }
 
@@ -116,7 +132,9 @@ class ElectionVisualizer {
             candidates: this.candidates,
             distributions: this.voterDistribution.getDistributionState(),
             approvalRadius: this.approvalRadius,
-            isStrategicVoting: this.isStrategicVoting
+            isStrategicVoting: this.isStrategicVoting,
+            starMaxDistance: this.starMaxDistance,
+            displayStarRanges: this.displayStarRanges
         };
         
         this.storage.save(state);
@@ -132,6 +150,8 @@ class ElectionVisualizer {
             this.numDistributions = savedState.numDistributions || this.numDistributions;
             this.approvalRadius = savedState.approvalRadius || this.approvalRadius;
             this.isStrategicVoting = savedState.isStrategicVoting !== undefined ? savedState.isStrategicVoting : this.isStrategicVoting;
+            this.starMaxDistance = savedState.starMaxDistance || this.starMaxDistance;
+            this.displayStarRanges = savedState.displayStarRanges !== undefined ? savedState.displayStarRanges : this.displayStarRanges;
             
             // Restore distribution states
             if (savedState.distributions) {
@@ -149,7 +169,9 @@ class ElectionVisualizer {
                 numDistributions: this.numDistributions,
                 currentVotingMethod: this.currentVotingMethod,
                 approvalRadius: this.approvalRadius,
-                isStrategicVoting: this.isStrategicVoting
+                isStrategicVoting: this.isStrategicVoting,
+                starMaxDistance: this.starMaxDistance,
+                displayStarRanges: this.displayStarRanges
             });
         }
     }
@@ -196,7 +218,10 @@ class ElectionVisualizer {
     // Election Management
     shouldCalculateElection() {
         return this.currentMode === 'one-election-multiple-distributions' && 
-               (this.currentVotingMethod === 'plurality' || this.currentVotingMethod === 'approval');
+               (this.currentVotingMethod === 'plurality' || 
+                this.currentVotingMethod === 'approval' ||
+                this.currentVotingMethod === 'irv' ||
+                this.currentVotingMethod === 'star');
     }
 
     calculateElectionIfNeeded() {
@@ -219,8 +244,34 @@ class ElectionVisualizer {
                     this.isStrategicVoting
                 );
                 this.ui.displayApprovalResults(this.electionResults, this.numCandidates);
+            } else if (this.currentVotingMethod === 'irv') {
+                this.selectedIRVRound = 1; // Reset to round 1
+                this.electionResults = this.votingMethods.calculateIRV(
+                    voters,
+                    this.candidates,
+                    this.numCandidates
+                );
+                this.ui.displayIRVResults(this.electionResults, this.numCandidates, this.selectedIRVRound);
+            } else if (this.currentVotingMethod === 'star') {
+                this.selectedSTARRound = 1; // Reset to round 1 (scoring)
+                this.electionResults = this.votingMethods.calculateSTAR(
+                    voters,
+                    this.candidates,
+                    this.numCandidates,
+                    this.starMaxDistance
+                );
+                
+                // Apply round 1 (scoring) voter states after calculation
+                const round1 = this.electionResults.rounds[0];
+                if (round1 && round1.voterStates) {
+                    round1.voterStates.forEach(state => {
+                        state.voterId.voteColor = state.voteColor;
+                        state.voterId.preferredCandidate = null;
+                    });
+                }
+                
+                this.ui.displaySTARResults(this.electionResults, this.numCandidates, this.selectedSTARRound);
             }
-            // TODO: Add other voting methods when implemented
         } else {
             this.clearElectionResults();
         }
@@ -303,6 +354,19 @@ class ElectionVisualizer {
         this.saveState();
     }
 
+    handleSTARMaxDistanceChange(distance) {
+        this.starMaxDistance = distance;
+        this.calculateElectionIfNeeded();
+        this.draw();
+        this.saveState();
+    }
+
+    handleDisplayStarRangesChange(display) {
+        this.displayStarRanges = display;
+        this.draw();
+        this.saveState();
+    }
+
     handleDragStart(type, item) {
         // Optional: Add visual feedback when drag starts
     }
@@ -352,6 +416,55 @@ class ElectionVisualizer {
         this.calculateElectionIfNeeded();
         this.draw();
         this.saveState();
+    }
+
+    handleRoundSelect(roundNum) {
+        this.selectedIRVRound = roundNum;
+        
+        // Apply the selected round's voter states to the canvas
+        if (this.electionResults && this.electionResults.method === 'irv') {
+            const round = this.electionResults.rounds.find(r => r.round === roundNum);
+            if (round && round.voterStates) {
+                // Update voters with their state from this round
+                round.voterStates.forEach(state => {
+                    state.voterId.preferredCandidate = state.currentVote;
+                    state.voterId.voteColor = state.voteColor;
+                });
+            }
+            
+            // Redisplay results with selected round
+            this.ui.displayIRVResults(this.electionResults, this.numCandidates, this.selectedIRVRound);
+        }
+        
+        this.draw();
+    }
+
+    handleSTARRoundSelect(roundNum) {
+        this.selectedSTARRound = roundNum;
+        
+        // Apply the selected round's voter states to the canvas
+        if (this.electionResults && this.electionResults.method === 'star') {
+            const round = this.electionResults.rounds.find(r => r.round === roundNum);
+            if (round && round.voterStates) {
+                // Update voters with their state from this round
+                round.voterStates.forEach(state => {
+                    if (roundNum === 1) {
+                        // Scoring round - use blended colors
+                        state.voterId.voteColor = state.voteColor;
+                        state.voterId.preferredCandidate = null;
+                    } else {
+                        // Runoff round - use finalist colors or grey
+                        state.voterId.preferredCandidate = state.currentVote;
+                        state.voterId.voteColor = state.voteColor;
+                    }
+                });
+            }
+            
+            // Redisplay results with selected round
+            this.ui.displaySTARResults(this.electionResults, this.numCandidates, this.selectedSTARRound);
+        }
+        
+        this.draw();
     }
 
     // Mode Management

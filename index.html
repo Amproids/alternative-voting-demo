@@ -33,7 +33,7 @@
             <h2>Voting Method</h2>
             <input type="radio" id="plurality" name="electionType" value="plurality" checked>
             <label for="plurality">Plurality</label><br>
-            <input type="radio" id="instant_runoff" name="electionType" value="instant_runoff">
+            <input type="radio" id="instant_runoff" name="electionType" value="irv">
             <label for="instant_runoff">Instant Runoff</label><br>
             <input type="radio" id="approval" name="electionType" value="approval">
             <label for="approval">Approval</label><br>
@@ -43,14 +43,25 @@
         
         <!-- Approval Voting Controls (show/hide based on voting method) -->
         <div id="approval-controls">
-        <label for="approvalRadiusSlider">Approval Radius: <span id="approvalRadiusValue">150</span></label>
-        <input type="range" id="approvalRadiusSlider" min="50" max="300" value="150">
-        
-        <div>
-            <label><input type="radio" name="votingStrategy" value="strategic" checked> Strategic</label>
-            <label><input type="radio" name="votingStrategy" value="honest"> Honest</label>
+            <label for="approvalRadiusSlider">Approval Radius: <span id="approvalRadiusValue">150</span></label>
+            <input type="range" id="approvalRadiusSlider" min="50" max="300" value="150">
+            
+            <div>
+                <label><input type="radio" name="votingStrategy" value="strategic" checked> Strategic</label>
+                <label><input type="radio" name="votingStrategy" value="honest"> Honest</label>
+            </div>
         </div>
+
+        <!-- STAR Voting Controls (show/hide based on voting method) -->
+        <div id="star-controls" style="display: none;">
+            <label for="starMaxDistanceSlider">Max Distance: <span id="starMaxDistanceValue">300</span></label>
+            <input type="range" id="starMaxDistanceSlider" min="100" max="600" value="300" step="10">
+
+            <div style="margin-top: 10px;">
+                <label><input type="checkbox" id="displayStarRanges" checked> Display star ranges</label>
+            </div>
         </div>
+
         <button id="resetButton">Reset Positions</button>
         
         <div class="multiple-elections-one-distribution-mode">

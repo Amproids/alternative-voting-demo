@@ -15,7 +15,11 @@ class UIController {
         this.onDistributionVotersChange = null;
         this.onApprovalRadiusChange = null;
         this.onVotingStrategyChange = null;
+        this.onSTARMaxDistanceChange = null;
         this.onResetClick = null;
+        this.onRoundSelect = null;
+        this.onSTARRoundSelect = null;
+        this.onDisplayStarRangesChange = null;
     }
 
     // Initialize all UI elements
@@ -23,7 +27,7 @@ class UIController {
         this.setupModeButtons();
         this.setupVotingMethodButtons();
         this.setupSliders();
-        this.setupApprovalControls();
+        this.setupVotingControls();
         this.setupResetButton();
     }
 
@@ -57,25 +61,35 @@ class UIController {
                     this.onVotingMethodChange(e.target.value);
                 }
                 
-                // Update approval controls visibility
-                this.updateApprovalControlsVisibility(e.target.value);
+                // Update voting method-specific controls visibility
+                this.updateVotingControlsVisibility(e.target.value);
             });
         });
         
         // Initial check on page load
         const selectedMethod = document.querySelector('input[name="electionType"]:checked');
         if (selectedMethod) {
-            this.updateApprovalControlsVisibility(selectedMethod.value);
+            this.updateVotingControlsVisibility(selectedMethod.value);
         }
     }
 
-    updateApprovalControlsVisibility(votingMethod) {
+    updateVotingControlsVisibility(votingMethod) {
         const approvalControls = document.getElementById('approval-controls');
+        const starControls = document.getElementById('star-controls');
+        
         if (approvalControls) {
             if (votingMethod === 'approval') {
                 approvalControls.style.display = 'block';
             } else {
                 approvalControls.style.display = 'none';
+            }
+        }
+        
+        if (starControls) {
+            if (votingMethod === 'star') {
+                starControls.style.display = 'block';
+            } else {
+                starControls.style.display = 'none';
             }
         }
     }
@@ -142,7 +156,7 @@ class UIController {
         }
     }
 
-    setupApprovalControls() {
+    setupVotingControls() {
         // Approval radius slider
         const approvalRadiusSlider = document.getElementById('approvalRadiusSlider');
         const approvalRadiusValue = document.getElementById('approvalRadiusValue');
@@ -167,6 +181,31 @@ class UIController {
                 }
             });
         });
+
+        // STAR max distance slider
+        const starMaxDistanceSlider = document.getElementById('starMaxDistanceSlider');
+        const starMaxDistanceValue = document.getElementById('starMaxDistanceValue');
+
+        if (starMaxDistanceSlider && starMaxDistanceValue) {
+            starMaxDistanceSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                starMaxDistanceValue.textContent = value;
+                if (this.onSTARMaxDistanceChange) {
+                    this.onSTARMaxDistanceChange(value);
+                }
+            });
+        }
+
+        // STAR display ranges checkbox
+        const displayStarRangesCheckbox = document.getElementById('displayStarRanges');
+
+        if (displayStarRangesCheckbox) {
+            displayStarRangesCheckbox.addEventListener('change', (e) => {
+                if (this.onDisplayStarRangesChange) {
+                    this.onDisplayStarRangesChange(e.target.checked);
+                }
+            });
+        }
     }
 
     setupResetButton() {
@@ -277,6 +316,20 @@ class UIController {
                 strategyInput.checked = true;
             }
         }
+
+        // Set STAR max distance slider
+        const starMaxDistanceSlider = document.getElementById('starMaxDistanceSlider');
+        const starMaxDistanceValue = document.getElementById('starMaxDistanceValue');
+        if (starMaxDistanceSlider && starMaxDistanceValue && state.starMaxDistance !== undefined) {
+            starMaxDistanceSlider.value = state.starMaxDistance;
+            starMaxDistanceValue.textContent = state.starMaxDistance;
+        }
+
+        // Set STAR display ranges checkbox
+        const displayStarRangesCheckbox = document.getElementById('displayStarRanges');
+        if (displayStarRangesCheckbox && state.displayStarRanges !== undefined) {
+            displayStarRangesCheckbox.checked = state.displayStarRanges;
+        }
     }
 
     // Display election results
@@ -333,20 +386,198 @@ class UIController {
         resultsDiv.innerHTML = html;
     }
 
-    // TODO: Display IRV results
-    displayIRVResults(electionResults, numCandidates) {
-        // TODO: Implement when IRV is added
+    // Display IRV results with accordion interface
+    displayIRVResults(electionResults, numCandidates, selectedRound = 1) {
+        const resultsDiv = document.getElementById('results');
+        if (!resultsDiv || !electionResults) return;
+
+        let html = '<h3>Instant Runoff Voting (IRV) Results</h3>';
+        html += `<p><strong>Total Voters:</strong> ${electionResults.totalVotes.toLocaleString()}</p>`;
+        html += `<p><strong>Majority Needed:</strong> ${Math.floor(electionResults.totalVotes / 2) + 1} votes</p>`;
+        
+        // Display each round as accordion
+        html += '<div class="irv-accordion">';
+        electionResults.rounds.forEach(round => {
+            const isSelected = round.round === selectedRound;
+            const caret = isSelected ? '▼' : '▶';
+            
+            html += `<div class="round-accordion">`;
+            html += `<div class="round-header ${isSelected ? 'active' : ''}" data-round="${round.round}">`;
+            html += `<span class="caret">${caret}</span> Round ${round.round}`;
+            html += `</div>`;
+            
+            if (isSelected) {
+                html += `<div class="round-content">`;
+                
+                for (let i = 0; i < numCandidates; i++) {
+                    if (round.activeCandidates[i]) {
+                        const votes = round.votes[i];
+                        const percentage = electionResults.totalVotes > 0 ? 
+                            (votes / electionResults.totalVotes * 100).toFixed(1) : 0;
+                        const isWinner = i === electionResults.winner && round.round === electionResults.rounds.length;
+                        
+                        html += `<div class="candidate-result ${isWinner ? 'winner' : ''}">`;
+                        html += `<span class="candidate-color" style="background-color: ${this.candidateColors[i]}"></span>`;
+                        html += `<span class="candidate-info">Candidate ${i + 1}: ${votes.toLocaleString()} votes (${percentage}%)</span>`;
+                        if (isWinner) {
+                            html += ' <strong>🏆 WINNER</strong>';
+                        }
+                        html += '</div>';
+                    }
+                }
+                
+                // Show eliminated candidates in this round
+                const eliminatedThisRound = electionResults.eliminated.filter(e => e.round === round.round);
+                if (eliminatedThisRound.length > 0) {
+                    html += '<div class="eliminated-section">';
+                    eliminatedThisRound.forEach(e => {
+                        html += `<div class="eliminated-candidate">`;
+                        html += `<span class="candidate-color" style="background-color: ${this.candidateColors[e.candidateIndex]}"></span>`;
+                        html += `<span class="candidate-info">Candidate ${e.candidateIndex + 1} eliminated (${e.votes} votes)</span>`;
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+        });
+        html += '</div>';
+
+        resultsDiv.innerHTML = html;
+        
+        // Add click handlers for accordion
+        const headers = resultsDiv.querySelectorAll('.round-header');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const roundNum = parseInt(header.getAttribute('data-round'));
+                if (this.onRoundSelect) {
+                    this.onRoundSelect(roundNum);
+                }
+            });
+        });
     }
 
-    // TODO: Display STAR results
-    displaySTARResults(electionResults, numCandidates) {
-        // TODO: Implement when STAR is added
+    // Display STAR results with accordion interface
+    displaySTARResults(electionResults, numCandidates, selectedRound = 1) {
+        const resultsDiv = document.getElementById('results');
+        if (!resultsDiv || !electionResults) return;
+
+        let html = '<h3>STAR Voting Results</h3>';
+        html += `<p><strong>Total Voters:</strong> ${electionResults.totalVoters.toLocaleString()}</p>`;
+        html += `<p><strong>Max Distance:</strong> ${electionResults.maxDistance}px</p>`;
+        
+        // Display rounds as accordion
+        html += '<div class="irv-accordion">';
+        
+        // Round 1: Scoring Round
+        const isScoringSelected = selectedRound === 1;
+        const scoringCaret = isScoringSelected ? '▼' : '▶';
+        
+        html += `<div class="round-accordion">`;
+        html += `<div class="round-header ${isScoringSelected ? 'active' : ''}" data-round="1">`;
+        html += `<span class="caret">${scoringCaret}</span> Scoring Round`;
+        html += `</div>`;
+        
+        if (isScoringSelected) {
+            html += `<div class="round-content">`;
+            
+            // Show all candidates with their total scores
+            const scoredCandidates = electionResults.candidateScores.map((score, index) => ({
+                index: index,
+                score: score
+            })).sort((a, b) => b.score - a.score);
+            
+            scoredCandidates.forEach((candidate, rank) => {
+                const i = candidate.index;
+                const score = candidate.score;
+                const avgScore = (score / electionResults.totalVoters).toFixed(2);
+                const isFinalist = electionResults.topTwo.includes(i);
+                
+                html += `<div class="candidate-result ${isFinalist ? 'finalist' : ''}">`;
+                html += `<span class="candidate-color" style="background-color: ${this.candidateColors[i]}"></span>`;
+                html += `<span class="candidate-info">Candidate ${i + 1}: ${score.toLocaleString()} points (avg ${avgScore})</span>`;
+                if (isFinalist) {
+                    html += ' <strong>→ Advances to Runoff</strong>';
+                }
+                html += '</div>';
+            });
+            
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        
+        // Round 2: Automatic Runoff
+        const isRunoffSelected = selectedRound === 2;
+        const runoffCaret = isRunoffSelected ? '▼' : '▶';
+        
+        html += `<div class="round-accordion">`;
+        html += `<div class="round-header ${isRunoffSelected ? 'active' : ''}" data-round="2">`;
+        html += `<span class="caret">${runoffCaret}</span> Automatic Runoff`;
+        html += `</div>`;
+        
+        if (isRunoffSelected) {
+            html += `<div class="round-content">`;
+            
+            const runoff = electionResults.rounds[1].runoffResults;
+            const finalist1 = runoff.finalist1;
+            const finalist2 = runoff.finalist2;
+            
+            // Show finalist results
+            const finalist1IsWinner = finalist1 === electionResults.winner;
+            const finalist2IsWinner = finalist2 === electionResults.winner;
+            
+            html += `<div class="candidate-result ${finalist1IsWinner ? 'winner' : ''}">`;
+            html += `<span class="candidate-color" style="background-color: ${this.candidateColors[finalist1]}"></span>`;
+            html += `<span class="candidate-info">Candidate ${finalist1 + 1}: ${runoff.finalist1Votes.toLocaleString()} voters</span>`;
+            if (finalist1IsWinner) {
+                html += ' <strong>🏆 WINNER</strong>';
+            }
+            html += '</div>';
+            
+            html += `<div class="candidate-result ${finalist2IsWinner ? 'winner' : ''}">`;
+            html += `<span class="candidate-color" style="background-color: ${this.candidateColors[finalist2]}"></span>`;
+            html += `<span class="candidate-info">Candidate ${finalist2 + 1}: ${runoff.finalist2Votes.toLocaleString()} voters</span>`;
+            if (finalist2IsWinner) {
+                html += ' <strong>🏆 WINNER</strong>';
+            }
+            html += '</div>';
+            
+            if (runoff.tiedVotes > 0) {
+                html += `<div class="candidate-result" style="opacity: 0.6;">`;
+                html += `<span class="candidate-color" style="background-color: #808080"></span>`;
+                html += `<span class="candidate-info">Tied (scored same): ${runoff.tiedVotes.toLocaleString()} voters</span>`;
+                html += '</div>';
+            }
+            
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        
+        html += '</div>';
+
+        resultsDiv.innerHTML = html;
+        
+        // Add click handlers for accordion
+        const headers = resultsDiv.querySelectorAll('.round-header');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const roundNum = parseInt(header.getAttribute('data-round'));
+                if (this.onSTARRoundSelect) {
+                    this.onSTARRoundSelect(roundNum);
+                }
+            });
+        });
     }
 
     clearElectionResults() {
         const resultsDiv = document.getElementById('results');
         if (resultsDiv) {
-            resultsDiv.innerHTML = 'Select "One Election, Multiple Distributions" mode and "Plurality" voting to see results.';
+            resultsDiv.innerHTML = 'Select "One Election, Multiple Distributions" mode and a voting method to see results.';
         }
     }
 }

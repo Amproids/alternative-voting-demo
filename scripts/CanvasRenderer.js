@@ -28,6 +28,7 @@ class CanvasRenderer {
     draw(state) {
         this.drawPoliticalSpace();
         this.drawApprovalCircles(state);
+        this.drawScoreRings(state);
         this.drawVoters(state);
         this.drawCandidates(state);
         this.drawCenterPoints(state);
@@ -83,9 +84,8 @@ class CanvasRenderer {
             approvalRadius
         } = state;
 
-        // Only draw approval circles in one-election mode with approval voting
-        if (currentMode !== 'one-election-multiple-distributions' || 
-            currentVotingMethod !== 'approval') {
+        // Only draw approval circles with approval voting
+        if (currentVotingMethod !== 'approval') {
             return;
         }
 
@@ -97,6 +97,42 @@ class CanvasRenderer {
             ctx.beginPath();
             ctx.arc(candidate.x, candidate.y, approvalRadius, 0, 2 * Math.PI);
             ctx.stroke();
+            ctx.globalAlpha = 1.0; // Reset alpha
+        });
+    }
+
+    drawScoreRings(state) {
+        const ctx = this.ctx;
+        const {
+            currentMode,
+            currentVotingMethod,
+            candidates,
+            numCandidates,
+            starMaxDistance,
+            displayStarRanges
+        } = state;
+
+        // Only draw score rings with STAR voting and if enabled
+        if (currentVotingMethod !== 'star' || !displayStarRanges) {
+            return;
+        }
+
+        const maxDistance = starMaxDistance || 300;
+        const ringSize = maxDistance / 5;
+
+        // Draw 5 concentric rings around each active candidate
+        candidates.slice(0, numCandidates).forEach(candidate => {
+            ctx.strokeStyle = candidate.color;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.3;
+
+            // Draw 5 rings (for scores 5, 4, 3, 2, 1)
+            for (let i = 1; i <= 5; i++) {
+                ctx.beginPath();
+                ctx.arc(candidate.x, candidate.y, ringSize * i, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+
             ctx.globalAlpha = 1.0; // Reset alpha
         });
     }
@@ -186,10 +222,36 @@ class CanvasRenderer {
         const {
             candidates,
             numCandidates,
-            draggedCandidate
+            draggedCandidate,
+            electionResults,
+            currentVotingMethod,
+            selectedIRVRound,
+            selectedSTARRound
         } = state;
         
-        candidates.slice(0, numCandidates).forEach(candidate => {
+        // Determine which candidates are eliminated (for IRV)
+        let eliminatedCandidates = new Array(numCandidates).fill(false);
+        if (currentVotingMethod === 'irv' && electionResults && electionResults.rounds) {
+            const round = electionResults.rounds.find(r => r.round === selectedIRVRound);
+            if (round && round.activeCandidates) {
+                for (let i = 0; i < numCandidates; i++) {
+                    eliminatedCandidates[i] = !round.activeCandidates[i];
+                }
+            }
+        }
+
+        // Determine which candidates are not in runoff (for STAR)
+        if (currentVotingMethod === 'star' && electionResults && electionResults.topTwo && selectedSTARRound === 2) {
+            for (let i = 0; i < numCandidates; i++) {
+                if (!electionResults.topTwo.includes(i)) {
+                    eliminatedCandidates[i] = true;
+                }
+            }
+        }
+        
+        candidates.slice(0, numCandidates).forEach((candidate, index) => {
+            const isEliminated = eliminatedCandidates[index];
+            
             if (candidate === draggedCandidate) {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 ctx.beginPath();
@@ -197,14 +259,22 @@ class CanvasRenderer {
                 ctx.fill();
             }
             
+            // Draw with reduced opacity if eliminated
+            if (isEliminated) {
+                ctx.globalAlpha = 0.3;
+            }
+            
             ctx.fillStyle = candidate.color;
             ctx.beginPath();
             ctx.arc(candidate.x, candidate.y, 8, 0, 2 * Math.PI);
             ctx.fill();
             
-            ctx.strokeStyle = '#000';
+            ctx.strokeStyle = isEliminated ? '#888' : '#000';
             ctx.lineWidth = 2;
             ctx.stroke();
+            
+            // Reset alpha
+            ctx.globalAlpha = 1.0;
         });
     }
 
