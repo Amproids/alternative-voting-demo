@@ -12,6 +12,7 @@ body {
     min-height: 100vh;
 }
 
+/* Layout */
 .main-container {
     display: grid;
     grid-template-columns: 240px 1fr 240px 250px;
@@ -20,6 +21,7 @@ body {
     min-height: calc(100vh - 40px);
 }
 
+/* Header */
 .header-section {
     background: white;
     padding: 20px;
@@ -40,6 +42,7 @@ body {
     font-size: 14px;
 }
 
+/* Canvas */
 .canvas-container {
     background: white;
     border-radius: 8px;
@@ -58,6 +61,7 @@ canvas {
     height: auto;
 }
 
+/* Controls Container */
 .controls {
     background: white;
     padding: 20px;
@@ -65,55 +69,59 @@ canvas {
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
+.controls section {
+    margin-bottom: 20px;
+}
+
+.controls section:last-child {
+    margin-bottom: 0;
+}
+
 .controls h2 {
     margin-bottom: 15px;
-    margin-top: 20px;
     color: #333;
     font-size: 18px;
 }
 
-.controls h2:first-child {
-    margin-top: 0;
+.controls h3 {
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 16px;
 }
 
-.modes {
-    margin-bottom: 20px;
+/* Mode Buttons */
+.mode-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.modes button {
+.mode-buttons button {
     width: 100%;
     padding: 10px;
-    background: #0070f3;
-    color: white;
+    background: #ccc;
+    color: #666;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    margin-bottom: 8px;
     transition: background-color 0.2s;
 }
 
-.modes button:hover {
-    background: #0051cc;
-}
-
-.modes button:last-child {
-    margin-bottom: 0;
-}
-
-.modes button.active {
-    background: #0070f3;
-}
-
-.modes button:not(.active) {
-    background: #ccc;
-    color: #666;
-}
-
-.modes button:not(.active):hover {
+.mode-buttons button:hover {
     background: #bbb;
 }
 
+.mode-buttons button.active {
+    background: #0070f3;
+    color: white;
+}
+
+.mode-buttons button.active:hover {
+    background: #0051cc;
+}
+
+/* Form Elements */
 input[type="range"] {
     width: 100%;
     margin-bottom: 15px;
@@ -131,81 +139,84 @@ label span {
     color: #333;
 }
 
-.multiple-elections-one-distribution-mode,
-.one-election-multiple-distributions-mode {
-    margin-bottom: 20px;
-}
-
-.election-types {
-    margin-bottom: 20px;
-}
-
-.election-types input[type="radio"] {
-    display: inline-block;
-    margin-right: 8px;
-    margin-bottom: 8px;
-}
-
-.election-types label {
-    display: inline;
-    margin-bottom: 8px;
-    color: black;
-    cursor: pointer;
-    width: 100%;
-}
-
-.results {
-    margin-top: 20px;
-}
-
-.results h2 {
-    margin-bottom: 15px;
-    color: #333;
-}
-
-#results {
-    color: #666;
-    line-height: 1.4;
-}
-
-/* Reset button */
-#resetButton {
-    width: 100%;
-    padding: 8px;
-    background: #dc3545;
-    color: white;
+/* Fieldsets */
+fieldset {
     border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
+    padding: 0;
+    margin: 0;
+}
+
+.voting-method-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.strategy-fieldset {
     margin-top: 10px;
-    margin-bottom: 20px;
-    transition: background-color 0.2s;
 }
 
-#resetButton:hover {
-    background: #c82333;
-}
-
-/* Distribution sections */
-.distribution-sections {
-    margin-top: 15px;
-}
-
-.distribution-section {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 15px;
-    margin-bottom: 15px;
-    background-color: #f8f9fa;
-}
-
-.distribution-section h4 {
-    margin-bottom: 10px;
+.strategy-fieldset legend {
+    font-size: 14px;
+    font-weight: 500;
     color: #333;
-    font-size: 16px;
+    margin-bottom: 8px;
 }
 
+.strategy-fieldset label {
+    display: inline-block;
+    margin-right: 15px;
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+
+.strategy-fieldset input[type="radio"] {
+    margin-right: 5px;
+}
+
+/* Screen reader only */
+.sr-only {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Radio Options */
+.radio-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.radio-option label {
+    margin-bottom: 0;
+    color: #333;
+    cursor: pointer;
+}
+
+/* Checkbox Group */
+.checkbox-group {
+    margin-top: 10px;
+}
+
+.checkbox-group label {
+    display: inline-block;
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+/* Slider Group */
 .slider-group {
     margin-bottom: 10px;
 }
@@ -223,7 +234,91 @@ label span {
     margin-bottom: 0;
 }
 
-/* Election results styling */
+/* Reset Button */
+.reset-button {
+    width: 100%;
+    padding: 8px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+
+.reset-button:hover {
+    background: #c82333;
+}
+
+/* Method-Specific Controls */
+.method-controls {
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+/* Mode Content Sections */
+.mode-content {
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+/* Distribution Sections */
+.distribution-sections {
+    margin-top: 15px;
+}
+
+.distribution-section {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+}
+
+.distribution-section h3 {
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 16px;
+}
+
+/* Results Container */
+.results-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.results-container h2 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 18px;
+}
+
+#results {
+    color: #666;
+    line-height: 1.4;
+}
+
+#results h3 {
+    color: #333;
+    margin-bottom: 10px;
+    margin-top: 15px;
+    font-size: 16px;
+}
+
+#results h3:first-child {
+    margin-top: 0;
+}
+
+#results p {
+    margin-bottom: 10px;
+    color: #666;
+}
+
+/* Candidate Results */
 .candidate-result {
     display: flex;
     align-items: center;
@@ -243,6 +338,14 @@ label span {
     margin-bottom: 5px;
 }
 
+.candidate-result.finalist {
+    background-color: #e3f2fd;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #90caf9;
+    margin-bottom: 5px;
+}
+
 .candidate-color {
     width: 16px;
     height: 16px;
@@ -257,18 +360,7 @@ label span {
     font-size: 14px;
 }
 
-#results h3 {
-    color: #333;
-    margin-bottom: 10px;
-    font-size: 16px;
-}
-
-#results p {
-    margin-bottom: 10px;
-    color: #666;
-}
-
-/* IRV Accordion Styles */
+/* IRV Accordion */
 .irv-accordion {
     margin-top: 15px;
 }
@@ -340,17 +432,7 @@ label span {
     color: #666;
 }
 
-/* STAR finalist styling */
-.candidate-result.finalist {
-    background-color: #e3f2fd;
-    display: flex;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #90caf9;
-    margin-bottom: 5px;
-}
-
-/* Responsive design for tablets and smaller screens */
+/* Responsive Design */
 @media (max-width: 1024px) {
     .main-container {
         grid-template-columns: 1fr;
@@ -359,18 +441,21 @@ label span {
     }
 }
 
-/* Mobile responsive */
 @media (max-width: 768px) {
     body {
         padding: 15px;
     }
+    
     .main-container {
         gap: 10px;
     }
+    
     .header-section,
-    .controls {
+    .controls,
+    .results-container {
         padding: 15px;
     }
+    
     .canvas-container {
         min-height: 300px;
     }
