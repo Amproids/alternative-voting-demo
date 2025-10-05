@@ -263,53 +263,130 @@ const VotingMethods = (function() {
     // TWO-ROUND SYSTEM
     // Plurality vote, then runoff between top 2 if no majority
     function runTwoRound(voters, candidates, skipVoterStates = false) {
-        // TODO: Implement actual two-round logic
-        // For now, return stub data
+        const rounds = [];
         
-        const results = {
-            method: 'two-round',
-            winner: 0,
-            rounds: [
+        // ROUND 1: Plurality voting (reuse optimized logic)
+        const voteCounts = new Array(candidates.length).fill(0);
+        const round1VoterStates = skipVoterStates ? null : [];
+        
+        // Each voter votes for their nearest candidate
+        voters.forEach(voter => {
+            const nearestCandidate = Utils.findNearestCandidate(voter.x, voter.y, candidates);
+            voteCounts[nearestCandidate]++;
+            
+            if (!skipVoterStates) {
+                round1VoterStates.push({
+                    voteColor: CONFIG.CANDIDATE_COLORS[nearestCandidate],
+                    preferredCandidate: nearestCandidate
+                });
+            }
+        });
+        
+        // Find top 2 candidates (single pass, efficient)
+        let first = 0, second = 1;
+        if (voteCounts[1] > voteCounts[0]) {
+            first = 1;
+            second = 0;
+        }
+        
+        for (let i = 2; i < candidates.length; i++) {
+            if (voteCounts[i] > voteCounts[first]) {
+                second = first;
+                first = i;
+            } else if (voteCounts[i] > voteCounts[second]) {
+                second = i;
+            }
+        }
+        
+        // Create Round 1 breakdown and add to rounds
+        const round1Breakdown = skipVoterStates ? null : createPluralityBreakdown(candidates, voteCounts, voters.length);
+        
+        rounds.push({
+            roundNumber: 1,
+            roundName: 'First Round',
+            breakdown: round1Breakdown,
+            voterStates: round1VoterStates
+        });
+        
+        // Check if winner has majority (>50%)
+        const totalVotes = voters.length;
+        const majorityThreshold = totalVotes / 2;
+        
+        let winner;
+        
+        if (voteCounts[first] > majorityThreshold) {
+            // First round winner has majority - no runoff needed
+            winner = first;
+        } else {
+            // ROUND 2: Runoff between top 2 candidates
+            const runoffVotes = [0, 0]; // votes for [first, second]
+            const round2VoterStates = skipVoterStates ? null : [];
+            
+            voters.forEach(voter => {
+                // Calculate squared distances to the two finalists (no sqrt needed)
+                const distSqFirst = Utils.distanceSquared(voter.x, voter.y, candidates[first].x, candidates[first].y);
+                const distSqSecond = Utils.distanceSquared(voter.x, voter.y, candidates[second].x, candidates[second].y);
+                
+                // Vote for closer candidate (handle ties randomly)
+                let votesFor;
+                if (distSqFirst < distSqSecond) {
+                    votesFor = 0; // Vote for first
+                } else if (distSqSecond < distSqFirst) {
+                    votesFor = 1; // Vote for second
+                } else {
+                    votesFor = Math.random() < 0.5 ? 0 : 1; // Random tie break
+                }
+                
+                runoffVotes[votesFor]++;
+                
+                if (!skipVoterStates) {
+                    const preferredCandidate = votesFor === 0 ? first : second;
+                    round2VoterStates.push({
+                        voteColor: CONFIG.CANDIDATE_COLORS[preferredCandidate],
+                        preferredCandidate: preferredCandidate
+                    });
+                }
+            });
+            
+            // Determine runoff winner
+            if (runoffVotes[0] > runoffVotes[1]) {
+                winner = first;
+            } else if (runoffVotes[1] > runoffVotes[0]) {
+                winner = second;
+            } else {
+                // Tie - random winner
+                winner = Math.random() < 0.5 ? first : second;
+            }
+            
+            // Create Round 2 breakdown (only if needed)
+            const round2Breakdown = skipVoterStates ? null : [
                 {
-                    roundNumber: 1,
-                    roundName: 'First Round',
-                    breakdown: candidates.map((candidate, index) => ({
-                        candidateId: index,
-                        name: candidate.name,
-                        votes: 0,
-                        percentage: 0
-                    })),
-                    voterStates: skipVoterStates ? null : voters.map(voter => ({
-                        voteColor: CONFIG.CANDIDATE_COLORS[0],
-                        preferredCandidate: 0
-                    }))
+                    candidateId: first,
+                    name: candidates[first].name,
+                    votes: runoffVotes[0],
+                    percentage: totalVotes > 0 ? ((runoffVotes[0] / totalVotes) * 100).toFixed(1) : '0.0'
                 },
                 {
-                    roundNumber: 2,
-                    roundName: 'Runoff',
-                    breakdown: [
-                        {
-                            candidateId: 0,
-                            name: candidates[0].name,
-                            votes: 0,
-                            percentage: 0
-                        },
-                        {
-                            candidateId: 1,
-                            name: candidates[1].name,
-                            votes: 0,
-                            percentage: 0
-                        }
-                    ],
-                    voterStates: skipVoterStates ? null : voters.map(voter => ({
-                        voteColor: CONFIG.CANDIDATE_COLORS[0],
-                        preferredCandidate: 0
-                    }))
+                    candidateId: second,
+                    name: candidates[second].name,
+                    votes: runoffVotes[1],
+                    percentage: totalVotes > 0 ? ((runoffVotes[1] / totalVotes) * 100).toFixed(1) : '0.0'
                 }
-            ]
-        };
+            ].sort((a, b) => b.votes - a.votes);
+            
+            rounds.push({
+                roundNumber: 2,
+                roundName: 'Runoff',
+                breakdown: round2Breakdown,
+                voterStates: round2VoterStates
+            });
+        }
         
-        return results;
+        return {
+            method: 'two-round',
+            winner: winner,
+            rounds: rounds
+        };
     }
     
     // SCORE VOTING

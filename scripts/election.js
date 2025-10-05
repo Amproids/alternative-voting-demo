@@ -174,7 +174,11 @@ const Election = (function() {
             
             // Display round results
             round.breakdown.forEach(item => {
-                html += `<div class="result-item">`;
+                // Get candidate color
+                const candidate = candidates[item.candidateId];
+                const color = candidate ? candidate.color : '#999';
+                
+                html += `<div class="result-item" data-candidate-color="${color}" style="border-left-color: ${color}">`;
                 html += `<span class="candidate-name">${item.name}:</span> `;
                 
                 if (item.votes !== undefined) {
