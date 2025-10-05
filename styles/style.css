@@ -1,4 +1,6 @@
 /* styles/style.css */
+
+/* Reset */
 * {
     margin: 0;
     padding: 0;
@@ -99,17 +101,18 @@ canvas {
 .mode-buttons button {
     width: 100%;
     padding: 10px;
-    background: #ccc;
-    color: #666;
+    background: #e0e0e0;
+    color: #555;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
+    font-weight: 500;
 }
 
 .mode-buttons button:hover {
-    background: #bbb;
+    background: #d0d0d0;
 }
 
 .mode-buttons button.active {
@@ -259,7 +262,9 @@ fieldset {
 }
 
 /* Mode Content Sections */
-.mode-content {
+.mode-content,
+.one-election-multiple-distributions-mode,
+.multiple-elections-one-distribution-mode {
     padding-top: 15px;
     border-top: 1px solid #eee;
 }
@@ -299,14 +304,18 @@ fieldset {
 
 #results {
     color: #666;
-    line-height: 1.4;
+    line-height: 1.6;
 }
 
 #results h3 {
     color: #333;
-    margin-bottom: 10px;
-    margin-top: 15px;
-    font-size: 16px;
+    margin-bottom: 12px;
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 #results h3:first-child {
@@ -318,79 +327,89 @@ fieldset {
     color: #666;
 }
 
-/* Candidate Results */
-.candidate-result {
-    display: flex;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.candidate-result:last-child {
-    border-bottom: none;
-}
-
-.candidate-result.winner {
-    background-color: #fff3cd;
-    padding: 8px;
+#results .error {
+    color: #dc3545;
+    background: #f8d7da;
+    padding: 10px;
     border-radius: 4px;
-    border: 1px solid #ffeaa7;
-    margin-bottom: 5px;
+    border: 1px solid #f5c6cb;
 }
 
-.candidate-result.finalist {
-    background-color: #e3f2fd;
-    padding: 8px;
+/* Single-Round Results Breakdown */
+
+.result-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: white;
     border-radius: 4px;
-    border: 1px solid #90caf9;
-    margin-bottom: 5px;
-}
-
-.candidate-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    margin-right: 10px;
-    border: 2px solid #333;
-    flex-shrink: 0;
-}
-
-.candidate-info {
-    flex-grow: 1;
+    border: 1px solid gray;
+    border-left: 8px solid #ddd;
     font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
 }
 
-/* IRV Accordion */
-.irv-accordion {
+.result-item:last-child {
+    margin-bottom: 0;
+}
+
+.result-item:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transform: translateX(2px);
+}
+
+/* Winner highlighting */
+.result-item:first-child {
+    background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, white 20%);
+    font-weight: 600;
+    border-left-width: 10px;
+}
+
+.candidate-name {
+    font-weight: 600;
+    color: #333;
+    margin-right: 8px;
+}
+
+/* Multi-Round Results */
+.rounds-container {
     margin-top: 15px;
 }
 
-.round-accordion {
-    margin-bottom: 8px;
+.round-section {
+    margin-bottom: 10px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
+    background: white;
 }
 
 .round-header {
     padding: 12px 15px;
-    background-color: #f5f5f5;
+    background: #f5f5f5;
     cursor: pointer;
     user-select: none;
     transition: background-color 0.2s;
-    font-weight: 500;
+    font-weight: 600;
+    color: #555;
+    display: flex;
+    align-items: center;
 }
 
 .round-header:hover {
-    background-color: #e8e8e8;
+    background: #e8e8e8;
 }
 
-.round-header.active {
-    background-color: #d0d0d0;
+.round-header.expanded {
+    background: #d0d0d0;
+    color: #333;
 }
 
-.round-header .caret {
+.round-arrow {
     display: inline-block;
+    width: 16px;
     margin-right: 8px;
     font-size: 12px;
     transition: transform 0.2s;
@@ -398,45 +417,40 @@ fieldset {
 
 .round-content {
     padding: 15px;
-    background-color: #fff;
+    background: #fafafa;
     border-top: 1px solid #ddd;
 }
 
-.eliminated-section {
+.round-content .result-item {
+    background: white;
+}
+
+.elimination-notice {
     margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #eee;
-}
-
-.eliminated-candidate {
-    padding: 8px;
-    margin-bottom: 5px;
-    background-color: #f9f9f9;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    opacity: 0.7;
-}
-
-.eliminated-candidate .candidate-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 8px;
-    border: 1px solid #ccc;
-}
-
-.eliminated-candidate .candidate-info {
-    font-style: italic;
-    color: #666;
+    padding: 10px 12px;
+    background: #fff3cd;
+    color: #856404;
+    border-radius: 4px;
+    border-left: 8px solid #ffc107;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 /* Responsive Design */
+@media (max-width: 1200px) {
+    .main-container {
+        grid-template-columns: 220px 1fr 220px;
+        gap: 15px;
+    }
+    
+    .results-container {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (max-width: 1024px) {
     .main-container {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
         gap: 15px;
     }
 }
@@ -464,12 +478,27 @@ fieldset {
         padding: 10px;
     }
     
-    .candidate-result {
+    .result-item {
         font-size: 13px;
+        padding: 8px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
     }
     
-    .candidate-color {
-        width: 14px;
-        height: 14px;
+    .header-section h1 {
+        font-size: 20px;
+    }
+    
+    .controls h2,
+    .results-container h2 {
+        font-size: 16px;
+    }
+    
+    #results h3 {
+        font-size: 16px;
     }
 }

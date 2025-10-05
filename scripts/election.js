@@ -128,10 +128,15 @@ const Election = (function() {
     
     // Format single-round election results
     function formatSingleRoundResults(results) {
+        const state = State.getState();
         let html = '<div class="results-breakdown">';
         
-        results.breakdown.forEach(item => {
-            html += `<div class="result-item">`;
+        results.breakdown.forEach((item, index) => {
+            // Get candidate color
+            const candidate = state.candidates[item.candidateId];
+            const color = candidate ? candidate.color : '#999';
+            
+            html += `<div class="result-item" data-candidate-color="${color}" style="border-left-color: ${color}">`;
             html += `<span class="candidate-name">${item.name}:</span> `;
             
             if (results.method === 'plurality' || results.method === 'approval') {
