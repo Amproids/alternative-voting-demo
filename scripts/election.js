@@ -299,12 +299,14 @@ const Election = (function() {
             scoreMaxDistance: state.scoreMaxDistance
         };
         
-        // Run election
+        // Run election with skipVoterStates=true for performance
+        // Winner map only needs winner ID, not voter colors
         const results = VotingMethods.runElection(
             state.votingMethod,
             voters,
             state.candidates,
-            params
+            params,
+            true  // skipVoterStates - critical performance optimization
         );
         
         return results ? results.winner : null;

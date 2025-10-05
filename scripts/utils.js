@@ -11,6 +11,40 @@ const Utils = (function() {
         return Math.sqrt(dx * dx + dy * dy);
     }
     
+    // Calculate squared distance (no sqrt - fast for comparisons)
+    function distanceSquared(x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        return dx * dx + dy * dy;
+    }
+    
+    // Check if point is within radius (uses squared distance)
+    function isWithinRadius(x1, y1, x2, y2, radius) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const distSq = dx * dx + dy * dy;
+        return distSq <= radius * radius;
+    }
+    
+    // Find nearest candidate index (no sqrt needed)
+    function findNearestCandidate(voterX, voterY, candidates) {
+        let nearestIndex = 0;
+        let minDistSq = Infinity;
+        
+        for (let i = 0; i < candidates.length; i++) {
+            const dx = candidates[i].x - voterX;
+            const dy = candidates[i].y - voterY;
+            const distSq = dx * dx + dy * dy;
+            
+            if (distSq < minDistSq) {
+                minDistSq = distSq;
+                nearestIndex = i;
+            }
+        }
+        
+        return nearestIndex;
+    }
+    
     // Generate Gaussian random number using Box-Muller transform
     function gaussianRandom() {
         let u1, u2;
@@ -282,6 +316,9 @@ const Utils = (function() {
     // Public API
     return {
         distance,
+        distanceSquared,
+        isWithinRadius,
+        findNearestCandidate,
         gaussianRandom,
         generateGaussianOffsets,
         applyOffsetsToCenter,
