@@ -70,7 +70,6 @@ const VotingMethods = (function() {
         
         // Sort breakdown by votes (descending)
         breakdown.sort((a, b) => b.votes - a.votes);
-        console.log(`Winner: ${candidates[winner].name}`);
         const results = {
             method: 'plurality',
             winner: winner,

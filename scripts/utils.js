@@ -23,6 +23,55 @@ const Utils = (function() {
         return z0;
     }
     
+    // Generate Gaussian offsets (reusable for multiple centers)
+    // Returns array of {offsetX, offsetY} pairs
+    function generateGaussianOffsets(count) {
+        const offsets = [];
+        
+        for (let i = 0; i < count; i++) {
+            const offsetX = gaussianRandom();
+            const offsetY = gaussianRandom();
+            
+            offsets.push({ offsetX, offsetY });
+        }
+        
+        return offsets;
+    }
+    
+    // Apply pre-generated offsets to a specific center point
+    // Creates voter objects positioned around the center
+    function applyOffsetsToCenter(centerX, centerY, offsets, spreadRadius) {
+        const sigma = spreadRadius / CONFIG.SIGMA_DIVISOR;
+        const points = [];
+        
+        for (let i = 0; i < offsets.length; i++) {
+            const offset = offsets[i];
+            
+            // Scale offset by sigma
+            const scaledOffsetX = offset.offsetX * sigma;
+            const scaledOffsetY = offset.offsetY * sigma;
+            
+            // Calculate actual position
+            const x = centerX + scaledOffsetX;
+            const y = centerY + scaledOffsetY;
+            
+            // Clamp display position to canvas bounds (with margin)
+            const displayX = clamp(x, CONFIG.CANVAS_MARGIN, CONFIG.CANVAS_WIDTH - CONFIG.CANVAS_MARGIN);
+            const displayY = clamp(y, CONFIG.CANVAS_MARGIN, CONFIG.CANVAS_HEIGHT - CONFIG.CANVAS_MARGIN);
+            
+            points.push({
+                x: displayX,
+                y: displayY,
+                offsetX: scaledOffsetX, // Store scaled offset for distribution movement
+                offsetY: scaledOffsetY,
+                voteColor: CONFIG.VOTER_DEFAULT_COLOR,
+                preferredCandidate: null
+            });
+        }
+        
+        return points;
+    }
+    
     // Generate Gaussian-distributed points around a center
     // spreadRadius is the user-facing parameter; internally converted to standard deviation
     function generateGaussianPoints(centerX, centerY, spreadRadius, count) {
@@ -234,6 +283,8 @@ const Utils = (function() {
     return {
         distance,
         gaussianRandom,
+        generateGaussianOffsets,
+        applyOffsetsToCenter,
         generateGaussianPoints,
         getCanvasCoordinates,
         clamp,

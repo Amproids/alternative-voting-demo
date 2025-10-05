@@ -21,6 +21,10 @@ const WinnerMap = (function() {
         let processedCells = 0;
         const totalCells = cols * rows;
         
+        // Generate Gaussian offsets ONCE for reuse across all cells
+        const distribution = state.distributions[0];
+        const offsets = Utils.generateGaussianOffsets(distribution.voterCount);
+        
         // Generate winner map by simulating elections at each grid point
         for (let row = 0; row < rows; row++) {
             winnerGrid[row] = [];
@@ -29,7 +33,8 @@ const WinnerMap = (function() {
                 const centerY = row * gridSize + gridSize / 2;
                 
                 // Simulate election at this point to determine winner
-                const winner = simulatePointWinner(centerX, centerY);
+                // Pass pre-generated offsets for performance
+                const winner = simulatePointWinner(centerX, centerY, offsets);
                 winnerGrid[row][col] = winner;
                 
                 processedCells++;
@@ -63,9 +68,10 @@ const WinnerMap = (function() {
     }
     
     // Simulate election at a specific point
-    function simulatePointWinner(x, y) {
+    // Accepts optional pre-generated offsets for performance
+    function simulatePointWinner(x, y, offsets = null) {
         // Use Election module's simulateElectionAt function
-        return Election.simulateElectionAt(x, y);
+        return Election.simulateElectionAt(x, y, offsets);
     }
     
     // Render winner map as colored rectangles/pixels

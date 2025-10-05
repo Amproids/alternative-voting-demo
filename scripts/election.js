@@ -259,18 +259,32 @@ const Election = (function() {
     }
     
     // Simulate election at a specific point (for Mode 2 winner map)
-    function simulateElectionAt(centerX, centerY) {
+    // Accepts optional pre-generated offsets for performance
+    function simulateElectionAt(centerX, centerY, offsets = null) {
         const state = State.getState();
         
-        // Generate voters at this center position
         // Use the first distribution's parameters for Mode 2
         const distribution = state.distributions[0];
-        const voters = Utils.generateGaussianPoints(
-            centerX,
-            centerY,
-            distribution.spreadRadius,
-            distribution.voterCount
-        );
+        
+        // Generate voters at this center position
+        let voters;
+        if (offsets) {
+            // Reuse pre-generated offsets (fast path for winner map)
+            voters = Utils.applyOffsetsToCenter(
+                centerX,
+                centerY,
+                offsets,
+                distribution.spreadRadius
+            );
+        } else {
+            // Generate new voters (fallback for individual simulations)
+            voters = Utils.generateGaussianPoints(
+                centerX,
+                centerY,
+                distribution.spreadRadius,
+                distribution.voterCount
+            );
+        }
         
         // Prepare parameters
         const params = {
