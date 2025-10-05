@@ -67,8 +67,8 @@ const CONFIG = {
     // Default parameter values
     DEFAULT_CANDIDATES: 2,
     DEFAULT_DISTRIBUTIONS: 1,
-    DEFAULT_VOTER_COUNT: 500,
-    DEFAULT_SPREAD_RADIUS: 500, // User-facing radius parameter
+    DEFAULT_VOTER_COUNT: 1000,
+    DEFAULT_SPREAD_RADIUS: 300, // User-facing radius parameter
     DEFAULT_APPROVAL_RADIUS: 150,
     DEFAULT_STAR_MAX_DISTANCE: 300,
     DEFAULT_SCORE_MAX_DISTANCE: 300,
