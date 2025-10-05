@@ -46,15 +46,19 @@ const UIControls = (function() {
         if (newMode === 'multiple-elections') {
             // Clear election results, will generate winner map
             State.updateState({ electionResults: null });
-            WinnerMap.clearCache();
             
-            // Trigger winner map generation
+            // Ensure offsets exist for distribution 0
+            if (state.distributions.length > 0) {
+                Distributions.ensureOffsetsExist(state.distributions[0]);
+            }
+            
+            // Trigger winner map generation (will use cache if valid)
             if (window.Main && window.Main.triggerWinnerMapGeneration) {
                 window.Main.triggerWinnerMapGeneration();
             }
         } else {
-            // Clear winner map, will run election
-            WinnerMap.clearCache();
+            // Mode 1 - just clear election results (keep winner map cache)
+            State.updateState({ electionResults: null });
             
             // Ensure voters are generated
             Distributions.generateAllDistributions(state.distributions);
@@ -111,7 +115,7 @@ const UIControls = (function() {
         // Show/hide method-specific controls
         showMethodControls(method);
         
-        // Clear winner map cache if in Mode 2
+        // Clear winner map cache if in Mode 2 (method change invalidates cache)
         const state = State.getState();
         if (state.mode === 'multiple-elections') {
             WinnerMap.clearCache();
@@ -253,6 +257,11 @@ const UIControls = (function() {
             votersSlider.addEventListener('change', (e) => {
                 const voterCount = parseInt(e.target.value);
                 Distributions.updateDistributionParams(distributionNum - 1, { voterCount });
+                // Changing voter count invalidates cache (offsets change)
+                const state = State.getState();
+                if (state.mode === 'multiple-elections') {
+                    WinnerMap.clearCache();
+                }
                 triggerRecalculation();
             });
         }
@@ -286,6 +295,11 @@ const UIControls = (function() {
             radiusSlider.addEventListener('change', (e) => {
                 const radius = parseInt(e.target.value);
                 State.updateState({ approvalRadius: radius });
+                // Clear cache - parameter change invalidates it
+                const state = State.getState();
+                if (state.mode === 'multiple-elections') {
+                    WinnerMap.clearCache();
+                }
                 triggerRecalculation();
             });
         }
@@ -294,6 +308,11 @@ const UIControls = (function() {
             radio.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     State.updateState({ approvalStrategy: e.target.value });
+                    // Clear cache - parameter change invalidates it
+                    const state = State.getState();
+                    if (state.mode === 'multiple-elections') {
+                        WinnerMap.clearCache();
+                    }
                     triggerRecalculation();
                 }
             });
@@ -316,6 +335,11 @@ const UIControls = (function() {
             maxDistanceSlider.addEventListener('change', (e) => {
                 const maxDistance = parseInt(e.target.value);
                 State.updateState({ starMaxDistance: maxDistance });
+                // Clear cache - parameter change invalidates it
+                const state = State.getState();
+                if (state.mode === 'multiple-elections') {
+                    WinnerMap.clearCache();
+                }
                 triggerRecalculation();
             });
         }
@@ -344,6 +368,11 @@ const UIControls = (function() {
             maxDistanceSlider.addEventListener('change', (e) => {
                 const maxDistance = parseInt(e.target.value);
                 State.updateState({ scoreMaxDistance: maxDistance });
+                // Clear cache - parameter change invalidates it
+                const state = State.getState();
+                if (state.mode === 'multiple-elections') {
+                    WinnerMap.clearCache();
+                }
                 triggerRecalculation();
             });
         }
@@ -364,6 +393,8 @@ const UIControls = (function() {
             resetBtn.addEventListener('click', () => {
                 Candidates.resetPositions();
                 Distributions.resetPositions();
+                // Clear cache - positions changed
+                WinnerMap.clearCache();
                 triggerRecalculation();
             });
         }
@@ -470,6 +501,11 @@ const UIControls = (function() {
         
         if (state.draggedItem) {
             // Drag completed - trigger recalculation
+            // Clear cache if candidate was dragged in Mode 2
+            if (state.draggedItem.type === 'candidate' && state.mode === 'multiple-elections') {
+                WinnerMap.clearCache();
+            }
+            
             State.updateState({ draggedItem: null });
             updateCursor('default');
             triggerRecalculation();
@@ -493,7 +529,7 @@ const UIControls = (function() {
                 window.Main.triggerElection();
             }
         } else {
-            WinnerMap.clearCache();
+            // Mode 2 - cache validation happens in triggerWinnerMapGeneration
             if (window.Main && window.Main.triggerWinnerMapGeneration) {
                 window.Main.triggerWinnerMapGeneration();
             }

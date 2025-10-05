@@ -33,6 +33,11 @@ const Main = (function() {
         // 5. Generate voters for all distributions (Mode 1)
         if (state.mode === 'one-election') {
             Distributions.generateAllDistributions(state.distributions);
+        } else {
+            // Mode 2 - ensure offsets exist for distribution 0
+            if (state.distributions.length > 0) {
+                Distributions.ensureOffsetsExist(state.distributions[0]);
+            }
         }
         
         // 6. Setup UI controls and event listeners
@@ -99,7 +104,23 @@ const Main = (function() {
             return;
         }
         
+        // Ensure offsets exist for distribution 0
+        if (state.distributions.length > 0) {
+            Distributions.ensureOffsetsExist(state.distributions[0]);
+        }
+        
         console.log('Generating winner map...');
+        
+        // Check if cache is valid
+        if (WinnerMap.isCacheValid()) {
+            console.log('Using cached winner map - no regeneration needed');
+            const resultsContainer = document.getElementById('results');
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '<p>Winner map loaded (cached). Drag candidates to see how territories change.</p>';
+            }
+            Rendering.render();
+            return;
+        }
         
         // Show progress message
         const resultsContainer = document.getElementById('results');

@@ -4,9 +4,107 @@
 const WinnerMap = (function() {
     'use strict';
     
+    // Check if cached winner map is still valid
+    function isCacheValid() {
+        const state = State.getState();
+        
+        // No cache exists
+        if (!state.winnerMapCache || !state.winnerMapCandidateSnapshot || !state.winnerMapMethodSnapshot) {
+            return false;
+        }
+        
+        // Check if candidate positions have changed
+        if (state.candidates.length !== state.winnerMapCandidateSnapshot.length) {
+            return false;
+        }
+        
+        for (let i = 0; i < state.candidates.length; i++) {
+            const current = state.candidates[i];
+            const cached = state.winnerMapCandidateSnapshot[i];
+            
+            if (current.id !== cached.id || current.x !== cached.x || current.y !== cached.y) {
+                return false;
+            }
+        }
+        
+        // Check if voting method has changed
+        if (state.votingMethod !== state.winnerMapMethodSnapshot.method) {
+            return false;
+        }
+        
+        // Check if method-specific parameters have changed
+        const params = state.winnerMapMethodSnapshot.params;
+        
+        if (state.votingMethod === 'approval') {
+            if (state.approvalRadius !== params.approvalRadius || 
+                state.approvalStrategy !== params.approvalStrategy) {
+                return false;
+            }
+        } else if (state.votingMethod === 'star') {
+            if (state.starMaxDistance !== params.starMaxDistance) {
+                return false;
+            }
+        } else if (state.votingMethod === 'score') {
+            if (state.scoreMaxDistance !== params.scoreMaxDistance) {
+                return false;
+            }
+        }
+        
+        // Cache is valid
+        return true;
+    }
+    
+    // Save cache metadata (candidate positions and method settings)
+    function saveCacheMetadata() {
+        const state = State.getState();
+        
+        // Snapshot candidate positions
+        const candidateSnapshot = state.candidates.map(c => ({
+            id: c.id,
+            x: c.x,
+            y: c.y
+        }));
+        
+        // Snapshot method and relevant parameters
+        const methodSnapshot = {
+            method: state.votingMethod,
+            params: {}
+        };
+        
+        if (state.votingMethod === 'approval') {
+            methodSnapshot.params.approvalRadius = state.approvalRadius;
+            methodSnapshot.params.approvalStrategy = state.approvalStrategy;
+        } else if (state.votingMethod === 'star') {
+            methodSnapshot.params.starMaxDistance = state.starMaxDistance;
+        } else if (state.votingMethod === 'score') {
+            methodSnapshot.params.scoreMaxDistance = state.scoreMaxDistance;
+        }
+        
+        State.updateState({
+            winnerMapCandidateSnapshot: candidateSnapshot,
+            winnerMapMethodSnapshot: methodSnapshot
+        });
+    }
+
     // Generate winner map by simulating elections across canvas grid
     function generateWinnerMap(onProgress) {
         const state = State.getState();
+        
+        // Check if cache is valid - if so, use it
+        if (isCacheValid()) {
+            console.log('Using cached winner map');
+            
+            // Update state.winnerMap with the cached data so rendering works
+            State.updateState({ winnerMap: state.winnerMapCache });
+            
+            if (onProgress) {
+                onProgress(100);
+            }
+            return state.winnerMapCache;
+        }
+        
+        console.log('Generating new winner map...');
+
         const gridSize = CONFIG.WINNER_MAP_GRID_SIZE;
         
         const width = CONFIG.CANVAS_WIDTH;
@@ -21,9 +119,10 @@ const WinnerMap = (function() {
         let processedCells = 0;
         const totalCells = cols * rows;
         
-        // Generate Gaussian offsets ONCE for reuse across all cells
+        // Get or generate Gaussian offsets ONCE for reuse across all cells
         const distribution = state.distributions[0];
-        const offsets = Utils.generateGaussianOffsets(distribution.voterCount);
+        Distributions.ensureOffsetsExist(distribution);
+        const offsets = distribution.offsets;
         
         // Generate winner map by simulating elections at each grid point
         for (let row = 0; row < rows; row++) {
@@ -59,6 +158,9 @@ const WinnerMap = (function() {
             winnerMap: mapData,
             winnerMapCache: mapData 
         });
+        
+        // Save cache metadata
+        saveCacheMetadata();
         
         if (onProgress) {
             onProgress(100);
@@ -109,23 +211,16 @@ const WinnerMap = (function() {
     
     // Check if winner map needs regeneration
     function needsRegeneration() {
-        const state = State.getState();
-        
-        // No cached map
-        if (!state.winnerMapCache) {
-            return true;
-        }
-        
-        // TODO: Check if candidate positions have changed
-        // For now, always regenerate when requested
-        return false;
+        return !isCacheValid();
     }
     
-    // Clear cached winner map
+    // Clear cached winner map and metadata
     function clearCache() {
         State.updateState({ 
             winnerMap: null,
-            winnerMapCache: null 
+            winnerMapCache: null,
+            winnerMapCandidateSnapshot: null,
+            winnerMapMethodSnapshot: null
         });
     }
     
@@ -154,6 +249,7 @@ const WinnerMap = (function() {
         simulatePointWinner,
         renderWinnerMap,
         needsRegeneration,
+        isCacheValid,
         clearCache,
         getWinnerAt
     };

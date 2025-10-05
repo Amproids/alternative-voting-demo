@@ -18,7 +18,7 @@ const State = (function() {
         
         // Distributions (for Mode 1)
         numDistributions: CONFIG.DEFAULT_DISTRIBUTIONS,
-        distributions: [], // Array of {id, centerX, centerY, spreadRadius, voterCount, voters}
+        distributions: [], // Array of {id, centerX, centerY, spreadRadius, voterCount, voters, offsets}
         
         // Method-specific settings
         approvalRadius: CONFIG.DEFAULT_APPROVAL_RADIUS,
@@ -40,7 +40,11 @@ const State = (function() {
         
         // Winner map (for Mode 2)
         winnerMap: null,
-        winnerMapCache: null
+        winnerMapCache: null,
+        
+        // Winner map cache metadata (for validation)
+        winnerMapCandidateSnapshot: null, // Array of {id, x, y}
+        winnerMapMethodSnapshot: null // {method, params}
     };
     
     // Change listeners
@@ -145,7 +149,8 @@ const State = (function() {
             centerY: pos.y,
             spreadRadius: CONFIG.DEFAULT_SPREAD_RADIUS,
             voterCount: CONFIG.DEFAULT_VOTER_COUNT,
-            voters: []
+            voters: [],
+            offsets: null
         }));
         
         // Reset method-specific settings
@@ -164,6 +169,10 @@ const State = (function() {
         state.winnerMap = null;
         state.winnerMapCache = null;
         
+        // Reset cache metadata
+        state.winnerMapCandidateSnapshot = null;
+        state.winnerMapMethodSnapshot = null;
+        
         saveState();
         notifyListeners();
     }
@@ -179,12 +188,12 @@ const State = (function() {
                 candidates: state.candidates,
                 numDistributions: state.numDistributions,
                 distributions: state.distributions.map(d => ({
-                    // Save voters array
                     id: d.id,
                     centerX: d.centerX,
                     centerY: d.centerY,
                     spreadRadius: d.spreadRadius,
-                    voterCount: d.voterCount
+                    voterCount: d.voterCount,
+                    offsets: d.offsets
                 })),
                 approvalRadius: state.approvalRadius,
                 approvalStrategy: state.approvalStrategy,
@@ -222,7 +231,8 @@ const State = (function() {
             // Restore distributions (voters will be regenerated)
             state.distributions = (parsed.distributions || []).map(d => ({
                 ...d,
-                voters: []
+                voters: [],
+                offsets: d.offsets || null
             }));
             
             // Restore method-specific settings

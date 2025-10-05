@@ -16,11 +16,25 @@ const Distributions = (function() {
                 centerY: positions[i].y,
                 spreadRadius: CONFIG.DEFAULT_SPREAD_RADIUS,
                 voterCount: CONFIG.DEFAULT_VOTER_COUNT,
-                voters: []
+                voters: [],
+                offsets: null
             });
         }
         
         return distributions;
+    }
+    
+    // Generate Gaussian offsets for a distribution (persistent)
+    function generateOffsets(distribution) {
+        distribution.offsets = Utils.generateGaussianOffsets(distribution.voterCount);
+        State.saveState();
+    }
+    
+    // Ensure offsets exist for a distribution, generate if missing
+    function ensureOffsetsExist(distribution) {
+        if (!distribution.offsets || distribution.offsets.length !== distribution.voterCount) {
+            generateOffsets(distribution);
+        }
     }
     
     // Generate voters for a single distribution
@@ -175,7 +189,8 @@ const Distributions = (function() {
                     centerY: defaultPositions[i].y,
                     spreadRadius: CONFIG.DEFAULT_SPREAD_RADIUS,
                     voterCount: CONFIG.DEFAULT_VOTER_COUNT,
-                    voters: []
+                    voters: [],
+                    offsets: null
                 });
             }
         } else {
@@ -207,6 +222,8 @@ const Distributions = (function() {
         
         if (params.voterCount !== undefined && params.voterCount !== distribution.voterCount) {
             distribution.voterCount = params.voterCount;
+            // Clear offsets when voter count changes - they need to be regenerated
+            distribution.offsets = null;
             needsRegeneration = true;
         }
         
@@ -236,6 +253,8 @@ const Distributions = (function() {
     // Public API
     return {
         initializeDistributions,
+        generateOffsets,
+        ensureOffsetsExist,
         generateDistribution,
         generateAllDistributions,
         getAllVoters,
