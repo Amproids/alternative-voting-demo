@@ -532,24 +532,123 @@ const VotingMethods = (function() {
     // BORDA COUNT
     // Voters rank all candidates, points awarded by rank
     function runBorda(voters, candidates, skipVoterStates = false) {
-        // TODO: Implement actual Borda count logic
-        // For now, return stub data
+        const numCandidates = candidates.length;
+        const bordaPoints = new Array(numCandidates).fill(0);
+        const voterStates = skipVoterStates ? null : [];
+        
+        // Each voter ranks all candidates by distance
+        voters.forEach(voter => {
+            // Calculate squared distances to all candidates (no sqrt needed for ranking)
+            const candidateDistances = candidates.map((candidate, index) => ({
+                candidateId: index,
+                distSq: Utils.distanceSquared(voter.x, voter.y, candidate.x, candidate.y)
+            }));
+            
+            // Sort by distance (ascending) - nearest is rank 1 (most preferred)
+            candidateDistances.sort((a, b) => a.distSq - b.distSq);
+            
+            // Award points: rank 1 gets (N-1) points, rank 2 gets (N-2) points, etc.
+            // Rank i (0-indexed) gets (N - 1 - i) points
+            for (let rank = 0; rank < numCandidates; rank++) {
+                const candidateId = candidateDistances[rank].candidateId;
+                const points = numCandidates - 1 - rank;
+                bordaPoints[candidateId] += points;
+            }
+            
+            // Only calculate voter states if needed (Mode 1)
+            if (!skipVoterStates) {
+                // Create points distribution for this voter
+                const voterPoints = new Array(numCandidates);
+                for (let rank = 0; rank < numCandidates; rank++) {
+                    const candidateId = candidateDistances[rank].candidateId;
+                    voterPoints[candidateId] = numCandidates - 1 - rank;
+                }
+                
+                // Determine voter color based on point distribution
+                const topCandidate = candidateDistances[0].candidateId;
+                const topPoints = voterPoints[topCandidate];
+                const secondPoints = voterPoints[candidateDistances[1].candidateId];
+                
+                let voteColor;
+                
+                // Check if top choice is significantly preferred (gets max points and second place gets less)
+                if (topPoints > secondPoints) {
+                    // Check if the margin is significant enough for pure color
+                    // If only 2 candidates, always show pure color for top choice
+                    // If 3+, only show pure color if there's a clear preference gap
+                    const pointGap = topPoints - secondPoints;
+                    const maxPossibleGap = numCandidates - 1;
+                    
+                    if (numCandidates === 2 || pointGap >= maxPossibleGap * 0.5) {
+                        // Strong preference for top candidate
+                        voteColor = CONFIG.CANDIDATE_COLORS[topCandidate];
+                    } else {
+                        // Use proportional blend based on points
+                        const weights = {};
+                        for (let i = 0; i < numCandidates; i++) {
+                            weights[i] = voterPoints[i];
+                        }
+                        voteColor = Utils.getProportionalColor(weights);
+                    }
+                } else {
+                    // Equal top choices (rare with distance-based ranking) - use grey
+                    voteColor = CONFIG.VOTER_GREY_COLOR;
+                }
+                
+                voterStates.push({
+                    voteColor: voteColor,
+                    preferredCandidate: topCandidate,
+                    rankings: candidateDistances.map(cd => cd.candidateId)
+                });
+            }
+        });
+        
+        // Determine winner (single pass - track max and ties together)
+        let maxPoints = bordaPoints[0];
+        let tiedCandidates = [0];
+        
+        for (let i = 1; i < bordaPoints.length; i++) {
+            if (bordaPoints[i] > maxPoints) {
+                maxPoints = bordaPoints[i];
+                tiedCandidates = [i];
+            } else if (bordaPoints[i] === maxPoints) {
+                tiedCandidates.push(i);
+            }
+        }
+        
+        // Pick winner (random if tied)
+        const winner = tiedCandidates.length > 1 ? Utils.randomChoice(tiedCandidates) : tiedCandidates[0];
+        
+        // Skip breakdown if not needed (Mode 2)
+        const breakdown = skipVoterStates ? null : createBordaBreakdown(candidates, bordaPoints, voters.length);
         
         const results = {
             method: 'borda',
-            winner: 0,
-            breakdown: candidates.map((candidate, index) => ({
-                candidateId: index,
-                name: candidate.name,
-                bordaPoints: 0
-            })),
-            voterStates: skipVoterStates ? null : voters.map(voter => ({
-                voteColor: CONFIG.CANDIDATE_COLORS[0],
-                preferredCandidate: 0
-            }))
+            winner: winner,
+            breakdown: breakdown,
+            voterStates: voterStates
         };
         
         return results;
+    }
+    
+    // Helper function to create Borda breakdown
+    function createBordaBreakdown(candidates, bordaPoints, totalVoters) {
+        const numCandidates = candidates.length;
+        const maxPossiblePoints = totalVoters * (numCandidates - 1);
+        
+        const breakdown = candidates.map((candidate, index) => ({
+            candidateId: index,
+            name: candidate.name,
+            bordaPoints: bordaPoints[index],
+            averagePoints: totalVoters > 0 ? (bordaPoints[index] / totalVoters).toFixed(2) : '0.00',
+            percentage: maxPossiblePoints > 0 ? ((bordaPoints[index] / maxPossiblePoints) * 100).toFixed(1) : '0.0'
+        }));
+        
+        // Sort breakdown by Borda points (descending)
+        breakdown.sort((a, b) => b.bordaPoints - a.bordaPoints);
+        
+        return breakdown;
     }
     
     // INSTANT RUNOFF VOTING (IRV)
