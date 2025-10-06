@@ -440,33 +440,155 @@ const VotingMethods = (function() {
     // INSTANT RUNOFF VOTING (IRV)
     // Iteratively eliminate candidate with fewest votes
     function runIRV(voters, candidates, skipVoterStates = false) {
-        // TODO: Implement actual IRV logic
-        // For now, return stub data with multiple rounds
+        const rounds = [];
+        const totalVotes = voters.length;
+        const majorityThreshold = totalVotes / 2;
         
-        const results = {
-            method: 'irv',
-            winner: 0,
-            rounds: [
-                {
-                    roundNumber: 1,
-                    roundName: 'Round 1',
-                    eliminated: null,
-                    breakdown: candidates.map((candidate, index) => ({
-                        candidateId: index,
-                        name: candidate.name,
-                        votes: 0,
-                        percentage: 0,
-                        active: true
-                    })),
-                    voterStates: skipVoterStates ? null : voters.map(voter => ({
-                        voteColor: CONFIG.CANDIDATE_COLORS[0],
-                        preferredCandidate: 0
-                    }))
+        // Pre-calculate all voter preferences (rankings by distance) - done once upfront
+        // Each voter gets an array of candidate IDs sorted by preference (nearest first)
+        const voterRankings = voters.map(voter => {
+            // Calculate squared distances to all candidates (no sqrt needed)
+            const candidateDistances = candidates.map((candidate, index) => ({
+                candidateId: index,
+                distSq: Utils.distanceSquared(voter.x, voter.y, candidate.x, candidate.y)
+            }));
+            
+            // Sort by distance (ascending) - nearest is most preferred
+            candidateDistances.sort((a, b) => a.distSq - b.distSq);
+            
+            // Return just the candidate IDs in preference order
+            return candidateDistances.map(cd => cd.candidateId);
+        });
+        
+        // Track which candidates are still active (boolean array for O(1) lookup)
+        const activeCandidates = new Array(candidates.length).fill(true);
+        let activeCount = candidates.length;
+        
+        let roundNumber = 0;
+        let winner = null;
+        
+        // Run elimination rounds until we have a winner
+        while (winner === null && activeCount > 1) {
+            roundNumber++;
+            
+            // Count first-choice votes among active candidates
+            const voteCounts = new Array(candidates.length).fill(0);
+            const roundVoterStates = skipVoterStates ? null : [];
+            
+            // Each voter votes for their top remaining choice
+            voters.forEach((voter, voterIndex) => {
+                // Find this voter's top choice among active candidates
+                const rankings = voterRankings[voterIndex];
+                let topChoice = null;
+                
+                // Scan rankings until we find an active candidate
+                for (let i = 0; i < rankings.length; i++) {
+                    const candidateId = rankings[i];
+                    if (activeCandidates[candidateId]) {
+                        topChoice = candidateId;
+                        break;
+                    }
                 }
-            ]
-        };
+                
+                // Record vote for top choice
+                if (topChoice !== null) {
+                    voteCounts[topChoice]++;
+                    
+                    // Store voter state only if needed (Mode 1)
+                    if (!skipVoterStates) {
+                        roundVoterStates.push({
+                            voteColor: CONFIG.CANDIDATE_COLORS[topChoice],
+                            preferredCandidate: topChoice
+                        });
+                    }
+                }
+            });
+            
+            // Find candidate with most votes (single pass)
+            let maxVotes = 0;
+            let maxCandidate = null;
+            
+            for (let i = 0; i < candidates.length; i++) {
+                if (activeCandidates[i] && voteCounts[i] > maxVotes) {
+                    maxVotes = voteCounts[i];
+                    maxCandidate = i;
+                }
+            }
+            
+            // Create round breakdown (only if needed - Mode 2 optimization)
+            const roundBreakdown = skipVoterStates ? null : candidates
+                .map((candidate, index) => ({
+                    candidateId: index,
+                    name: candidate.name,
+                    votes: voteCounts[index],
+                    percentage: totalVotes > 0 ? ((voteCounts[index] / totalVotes) * 100).toFixed(1) : '0.0',
+                    active: activeCandidates[index]
+                }))
+                .filter(c => c.active)
+                .sort((a, b) => b.votes - a.votes);
+            
+            let eliminated = null;
+            
+            if (maxVotes > majorityThreshold) {
+                // We have a winner with majority!
+                winner = maxCandidate;
+                
+            } else if (activeCount === 2) {
+                // Only 2 candidates left - highest vote count wins (even without majority)
+                winner = maxCandidate;
+                
+            } else {
+                // Find candidate(s) with fewest votes to eliminate (single pass)
+                let minVotes = Infinity;
+                const candidatesWithMinVotes = [];
+                
+                for (let i = 0; i < candidates.length; i++) {
+                    if (activeCandidates[i]) {
+                        if (voteCounts[i] < minVotes) {
+                            minVotes = voteCounts[i];
+                            candidatesWithMinVotes.length = 0; // Clear array efficiently
+                            candidatesWithMinVotes.push(i);
+                        } else if (voteCounts[i] === minVotes) {
+                            candidatesWithMinVotes.push(i);
+                        }
+                    }
+                }
+                
+                // If multiple candidates tied for last, pick one randomly
+                eliminated = candidatesWithMinVotes.length > 1 
+                    ? Utils.randomChoice(candidatesWithMinVotes) 
+                    : candidatesWithMinVotes[0];
+                
+                // Eliminate the candidate
+                activeCandidates[eliminated] = false;
+                activeCount--;
+            }
+            
+            // Store round data
+            rounds.push({
+                roundNumber: roundNumber,
+                roundName: `Round ${roundNumber}`,
+                eliminated: eliminated,
+                breakdown: roundBreakdown,
+                voterStates: roundVoterStates
+            });
+        }
         
-        return results;
+        // Handle edge case: single candidate from start
+        if (winner === null && activeCount === 1) {
+            for (let i = 0; i < candidates.length; i++) {
+                if (activeCandidates[i]) {
+                    winner = i;
+                    break;
+                }
+            }
+        }
+        
+        return {
+            method: 'irv',
+            winner: winner,
+            rounds: rounds
+        };
     }
     
     // STAR VOTING (Score Then Automatic Runoff)

@@ -178,12 +178,14 @@ const Rendering = (function() {
             state.hoveredItem
         );
         
-        // 5. Render candidates
+        // 5. Render candidates (pass election results for eliminated candidate styling)
         Candidates.renderCandidates(
             ctx,
             state.candidates,
             state.draggedItem,
-            state.hoveredItem
+            state.hoveredItem,
+            state.electionResults,  // ADD THIS
+            state.selectedRound     // ADD THIS
         );
     }
     

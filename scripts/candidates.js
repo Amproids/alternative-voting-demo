@@ -53,10 +53,70 @@ const Candidates = (function() {
     }
     
     // Render candidates on canvas
-    function renderCandidates(ctx, candidates, draggedItem, hoveredItem) {
+    function renderCandidates(ctx, candidates, draggedItem, hoveredItem, electionResults = null, selectedRound = 0) {
+        // Determine which candidates are eliminated or not participating in this round
+        const eliminatedCandidates = new Set();
+        
+        if (electionResults && electionResults.rounds) {
+            const method = electionResults.method;
+            
+            if (method === 'irv') {
+                // IRV: Collect all candidates eliminated BEFORE the selected round
+                for (let i = 0; i < selectedRound && i < electionResults.rounds.length; i++) {
+                    const round = electionResults.rounds[i];
+                    if (round.eliminated !== null && round.eliminated !== undefined) {
+                        eliminatedCandidates.add(round.eliminated);
+                    }
+                }
+                
+            } else if (method === 'two-round') {
+                // Two-Round: In Round 2 (runoff), show all candidates except top 2 as eliminated
+                if (selectedRound === 1 && electionResults.rounds.length > 1) {
+                    const round2 = electionResults.rounds[1];
+                    // Round 2 breakdown only has the 2 finalists
+                    const finalistIds = new Set(round2.breakdown.map(item => item.candidateId));
+                    
+                    // Mark all non-finalists as eliminated
+                    candidates.forEach(candidate => {
+                        if (!finalistIds.has(candidate.id)) {
+                            eliminatedCandidates.add(candidate.id);
+                        }
+                    });
+                }
+                
+            } else if (method === 'star') {
+                // STAR: In Round 2 (automatic runoff), show all candidates except top 2 as eliminated
+                if (selectedRound === 1 && electionResults.rounds.length > 1) {
+                    const round2 = electionResults.rounds[1];
+                    
+                    // STAR Round 2 has a 'finalists' array
+                    if (round2.finalists && round2.finalists.length === 2) {
+                        const finalistIds = new Set(round2.finalists);
+                        
+                        // Mark all non-finalists as eliminated
+                        candidates.forEach(candidate => {
+                            if (!finalistIds.has(candidate.id)) {
+                                eliminatedCandidates.add(candidate.id);
+                            }
+                        });
+                    } else {
+                        // Fallback: check breakdown for finalists
+                        const finalistIds = new Set(round2.breakdown.map(item => item.candidateId));
+                        
+                        candidates.forEach(candidate => {
+                            if (!finalistIds.has(candidate.id)) {
+                                eliminatedCandidates.add(candidate.id);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+        
         candidates.forEach(candidate => {
             const isDragged = draggedItem && draggedItem.type === 'candidate' && draggedItem.id === candidate.id;
             const isHovered = hoveredItem && hoveredItem.type === 'candidate' && hoveredItem.id === candidate.id;
+            const isEliminated = eliminatedCandidates.has(candidate.id);
             
             // Draw halo if dragged or hovered
             if (isDragged || isHovered) {
@@ -66,14 +126,19 @@ const Candidates = (function() {
                 ctx.fill();
             }
             
-            // Draw candidate circle
-            ctx.fillStyle = candidate.color;
-            ctx.strokeStyle = CONFIG.CANDIDATE_BORDER_COLOR;
-            ctx.lineWidth = CONFIG.CANDIDATE_BORDER_WIDTH;
-            ctx.beginPath();
-            ctx.arc(candidate.x, candidate.y, CONFIG.CANDIDATE_RADIUS, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            if (isEliminated) {
+                // Use eliminated rendering style
+                renderCandidateEliminated(ctx, candidate);
+            } else {
+                // Draw candidate circle normally
+                ctx.fillStyle = candidate.color;
+                ctx.strokeStyle = CONFIG.CANDIDATE_BORDER_COLOR;
+                ctx.lineWidth = CONFIG.CANDIDATE_BORDER_WIDTH;
+                ctx.beginPath();
+                ctx.arc(candidate.x, candidate.y, CONFIG.CANDIDATE_RADIUS, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
         });
     }
     
